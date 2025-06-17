@@ -22,14 +22,18 @@ def salvar_tarefas(tarefas):
         json.dump(tarefas, f, indent=2, ensure_ascii=False)
 
 # ---------- Sistema de Notificações ----------
-def tocar_som_alerta():
-    winsound.PlaySound("SystemExclamation", winsound.SND_ALIAS)
 
-def tocar_som_aviso():
-    winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+def play_task_start_sound():
+    winsound.PlaySound("audio/start.wav", winsound.SND_FILENAME)
 
-def tocar_som_erro():
-    winsound.PlaySound("SystemHand", winsound.SND_ALIAS)
+def play_task_end_sound():
+    winsound.PlaySound("audio/end.wav", winsound.SND_FILENAME)
+
+def play_time_warning_sound():
+    winsound.PlaySound("audio/warning.wav", winsound.SND_FILENAME)
+
+def play_time_expired_sound():
+    winsound.PlaySound("audio/expired.wav", winsound.SND_FILENAME)
 
 def iniciar_tarefa(popup, tarefa):
     popup.destroy()
@@ -51,7 +55,7 @@ def exibir_popup(tarefa):
     botao_ok = tk.Button(popup, text="Iniciar tarefa", font=("Helvetica", 20), command=lambda: iniciar_tarefa(popup, tarefa))
     botao_ok.pack(pady=20)
 
-    tocar_som_alerta()
+    play_task_start_sound()
 
 # ---------- Widget de Tarefa Minimizado ----------
 def mostrar_widget_tarefa(tarefa):
@@ -81,6 +85,7 @@ def mostrar_widget_tarefa(tarefa):
         nonlocal tarefa_concluida
         tarefa_concluida = True
         status.config(text="Tarefa concluída", bg="white", fg="green")
+        play_task_end_sound()
         timer_label.config(fg="green")
         widget.after(5000, widget.destroy)
 
@@ -92,7 +97,7 @@ def mostrar_widget_tarefa(tarefa):
                 if not tarefa_concluida:
                     timer_label.config(text="00:00", bg="white", fg="red")
                     status.config(text="Tempo esgotado", bg="white", fg="red")
-                    tocar_som_erro()
+                    play_time_expired_sound()
                 break
             minutos = restante // 60
             segundos = restante % 60
@@ -105,7 +110,7 @@ def mostrar_widget_tarefa(tarefa):
                 status.config(bg="red", fg="white")
                 botao_ok.config(bg="white")
                 timer_label.config(bg="white", fg="black")
-                tocar_som_aviso()
+                play_time_warning_sound()
                 alerta_30 = True
 
             time.sleep(1)

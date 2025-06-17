@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import threading
 import time
 import winsound
@@ -22,59 +22,18 @@ def salvar_tarefas(tarefas):
         json.dump(tarefas, f, indent=2, ensure_ascii=False)
 
 # ---------- Sistema de Notificações ----------
-def tocar_som():
-    winsound.MessageBeep()
+def tocar_som_alerta():
+    winsound.PlaySound("SystemExclamation", winsound.SND_ALIAS)
 
-def iniciar_widget(tarefa):
-    widget = tk.Toplevel()
-    widget.title("Tarefa em andamento")
-    widget.geometry("300x200+20+20")
-    widget.attributes("-topmost", True)
-    widget.configure(bg="white")
+def tocar_som_aviso():
+    winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
-    titulo = tk.Label(widget, text=tarefa['titulo'], font=("Helvetica", 16, "bold"), bg="white")
-    titulo.pack(pady=10)
+def tocar_som_erro():
+    winsound.PlaySound("SystemHand", winsound.SND_ALIAS)
 
-    status = tk.Label(widget, text="Tarefa em andamento", font=("Helvetica", 14), bg="white")
-    status.pack()
-
-    timer_label = tk.Label(widget, text="", font=("Helvetica", 24), bg="white")
-    timer_label.pack(pady=10)
-
-    def finalizar_widget():
-        status.config(text="Tarefa concluída", bg="green")
-        timer_label.config(bg="green")
-        titulo.config(bg="green")
-        widget.after(5000, widget.destroy)
-
-    botao_ok = tk.Button(widget, text="OK", font=("Helvetica", 12), command=finalizar_widget)
-    botao_ok.pack(pady=10)
-
-    duracao = tarefa['duracao'] * 60
-    inicio = time.time()
-    alerta_30_percent = False
-
-    def atualizar_timer():
-        nonlocal duracao, alerta_30_percent
-        while duracao > 0:
-            restante = int(duracao)
-            minutos = restante // 60
-            segundos = restante % 60
-            timer_label.config(text=f"{minutos:02}:{segundos:02}")
-
-            percentual = duracao / (tarefa['duracao'] * 60)
-            if percentual <= 0.3 and not alerta_30_percent:
-                tocar_som()
-                alerta_30_percent = True
-
-            time.sleep(1)
-            duracao -= 1
-
-        timer_label.config(text="00:00", bg="red")
-        status.config(text="Tempo esgotado", bg="red")
-        titulo.config(bg="red")
-
-    threading.Thread(target=atualizar_timer, daemon=True).start()
+def iniciar_tarefa(popup, tarefa):
+    popup.destroy()
+    mostrar_widget_tarefa(tarefa)
 
 def exibir_popup(tarefa):
     popup = tk.Toplevel()
@@ -84,19 +43,74 @@ def exibir_popup(tarefa):
     popup.configure(bg="white")
 
     titulo = tk.Label(popup, text=tarefa['titulo'], font=("Helvetica", 36, "bold"), bg="white")
-    titulo.pack(pady=100)
+    titulo.pack(pady=30)
 
-    status = tk.Label(popup, text="Clique em OK para iniciar a tarefa", font=("Helvetica", 24), bg="white")
+    horario_label = tk.Label(popup, text=f"Horário programado: {tarefa['horario']}", font=("Helvetica", 24), bg="white")
+    horario_label.pack(pady=10)
+
+    botao_ok = tk.Button(popup, text="Iniciar tarefa", font=("Helvetica", 20), command=lambda: iniciar_tarefa(popup, tarefa))
+    botao_ok.pack(pady=20)
+
+    tocar_som_alerta()
+
+# ---------- Widget de Tarefa Minimizado ----------
+def mostrar_widget_tarefa(tarefa):
+    widget = tk.Toplevel()
+    widget.title("Tarefa em andamento")
+    widget.geometry("300x150+10+10")
+    widget.attributes("-topmost", True)
+
+    titulo = tk.Label(widget, text=tarefa['titulo'], font=("Helvetica", 14))
+    titulo.pack(pady=5)
+
+    status = tk.Label(widget, text="Tarefa em andamento", font=("Helvetica", 12))
     status.pack()
 
-    def iniciar_tarefa():
-        popup.destroy()
-        iniciar_widget(tarefa)
+    timer_label = tk.Label(widget, text="", font=("Helvetica", 24), bg="white", fg="black")
+    timer_label.pack(pady=10)
 
-    botao_ok = tk.Button(popup, text="OK", font=("Helvetica", 24), command=iniciar_tarefa)
-    botao_ok.pack(pady=30)
+    botao_ok = tk.Button(widget, text="Finalizar tarefa", font=("Helvetica", 12), command=lambda: concluir_tarefa())
+    botao_ok.pack(pady=5)
 
-    tocar_som()
+    duracao = tarefa['duracao'] * 60
+    inicio = time.time()
+    tarefa_concluida = False
+    alerta_30 = False
+
+    def concluir_tarefa():
+        nonlocal tarefa_concluida
+        tarefa_concluida = True
+        status.config(text="Tarefa concluída", bg="white", fg="green")
+        timer_label.config(fg="green")
+        widget.after(5000, widget.destroy)
+
+    def atualizar_timer():
+        nonlocal alerta_30
+        while True:
+            restante = int(duracao - (time.time() - inicio))
+            if restante <= 0:
+                if not tarefa_concluida:
+                    timer_label.config(text="00:00", bg="white", fg="red")
+                    status.config(text="Tempo esgotado", bg="white", fg="red")
+                    tocar_som_erro()
+                break
+            minutos = restante // 60
+            segundos = restante % 60
+            timer_label.config(text=f"{minutos:02}:{segundos:02}")
+
+            percentual = restante / duracao
+            if percentual <= 0.3 and not alerta_30:
+                widget.configure(bg="red")
+                titulo.config(bg="red", fg="white")
+                status.config(bg="red", fg="white")
+                botao_ok.config(bg="white")
+                timer_label.config(bg="white", fg="black")
+                tocar_som_aviso()
+                alerta_30 = True
+
+            time.sleep(1)
+
+    threading.Thread(target=atualizar_timer, daemon=True).start()
 
 # ---------- Verificação e Disparo de Tarefas ----------
 def verificar_tarefas():

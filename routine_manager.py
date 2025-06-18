@@ -73,8 +73,11 @@ def mostrar_widget_tarefa(tarefa):
     timer_label = tk.Label(widget, text="", font=("Helvetica", 24), bg="white", fg="black")
     timer_label.pack(pady=10)
 
-    botao_ok = tk.Button(widget, text="Finalizar tarefa", font=("Helvetica", 12), command=lambda: concluir_tarefa())
-    botao_ok.pack(pady=5)
+    botao_ok = tk.Button(widget, text="Finalizar tarefa", font=("Segoe UI", 14, "bold"), bg="#000", fg="#fff", command=lambda: concluir_tarefa())
+    botao_ok.pack(pady=10, padx=15)
+
+    widget.update_idletasks()
+    widget.geometry("")  # Ajuste automático ao tamanho mínimo necessário
 
     duracao = tarefa['duracao'] * 60
     inicio = time.time()
@@ -108,7 +111,7 @@ def mostrar_widget_tarefa(tarefa):
                 widget.configure(bg="red")
                 titulo.config(bg="red", fg="white")
                 status.config(bg="red", fg="white")
-                botao_ok.config(bg="white")
+                botao_ok.config(bg="white", fg="black")
                 timer_label.config(bg="white", fg="black")
                 play_time_warning_sound()
                 alerta_30 = True

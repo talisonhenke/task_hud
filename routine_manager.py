@@ -12,10 +12,18 @@ TAREFAS_ARQUIVO = "tasks.json"
 # ---------- Funções de Leitura e Escrita ----------
 def carregar_tarefas():
     if not os.path.exists(TAREFAS_ARQUIVO):
-        with open(TAREFAS_ARQUIVO, "w") as f:
+        with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:
             json.dump([], f)
-    with open(TAREFAS_ARQUIVO, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return []
+
+    try:
+        with open(TAREFAS_ARQUIVO, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # Arquivo corrompido → reescreve com lista vazia
+        with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:
+            json.dump([], f)
+        return []
 
 def salvar_tarefas(tarefas):
     with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:

@@ -1,3 +1,5 @@
+from PIL import Image, ImageDraw
+import pystray
 import tkinter as tk
 from tkinter import messagebox
 import json
@@ -6,8 +8,44 @@ from datetime import datetime
 import threading
 import time
 import winsound
+import ctypes
+import ctypes.wintypes
 
 TAREFAS_ARQUIVO = "tasks.json"
+
+# ---------- Ícone do sistema função bandeja ----------
+def criar_icone_bandeja(janela):
+    from pystray import Icon, MenuItem as item, Menu
+
+    def mostrar():
+        janela.after(0, janela.deiconify)
+
+    def sair():
+        icon.stop()
+        janela.after(0, janela.destroy)
+
+    # Carrega o seu ícone personalizado .ico
+    try:
+        image = Image.open("icon/taskhud.ico")
+    except Exception as e:
+        print("Erro ao carregar ícone personalizado:", e)
+        # Ícone fallback simples (quadrado preto)
+        image = Image.new('RGB', (64, 64), "white")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((16, 16, 48, 48), fill="black")
+
+    icon = Icon("TaskHUD", image, "Task HUD", menu=Menu(
+        item("Mostrar", lambda: mostrar()),
+        item("Sair", lambda: sair())
+    ))
+
+    def ao_fechar():
+        janela.withdraw()
+        if not icon.visible:
+            threading.Thread(target=icon.run, daemon=True).start()
+
+    janela.protocol("WM_DELETE_WINDOW", ao_fechar)
+
 
 # ---------- Funções de Leitura e Escrita ----------
 def carregar_tarefas():
@@ -65,6 +103,22 @@ def exibir_popup(tarefa):
 
     play_task_start_sound()
 
+# ---------- Ícone na barra de tarefas muda com ping----------
+def flash_janela(widget):
+    hwnd = ctypes.windll.user32.GetParent(widget.winfo_id())
+    FLASHW_ALL = 3
+    FLASHW_TIMERNOFG = 12
+
+    class FLASHWINFO(ctypes.Structure):
+        _fields_ = [('cbSize', ctypes.wintypes.UINT),
+                    ('hwnd', ctypes.wintypes.HWND),
+                    ('dwFlags', ctypes.wintypes.DWORD),
+                    ('uCount', ctypes.wintypes.UINT),
+                    ('dwTimeout', ctypes.wintypes.DWORD)]
+
+    flash = FLASHWINFO(ctypes.sizeof(FLASHWINFO), hwnd, FLASHW_ALL, 5, 0)
+    ctypes.windll.user32.FlashWindowEx(ctypes.byref(flash))
+
 # ---------- Widget de Tarefa Minimizado ----------
 def mostrar_widget_tarefa(tarefa):
     widget = tk.Toplevel()
@@ -85,7 +139,7 @@ def mostrar_widget_tarefa(tarefa):
     botao_ok.pack(pady=10, padx=15)
 
     widget.update_idletasks()
-    widget.geometry("")  # Ajuste automático ao tamanho mínimo necessário
+    widget.geometry("")  # Ajuste automático
 
     duracao = tarefa['duracao'] * 60
     inicio = time.time()
@@ -103,30 +157,60 @@ def mostrar_widget_tarefa(tarefa):
     def atualizar_timer():
         nonlocal alerta_30
         while True:
+            if not widget.winfo_exists():
+                break  # Para a thread se a janela for destruída
+
             restante = int(duracao - (time.time() - inicio))
             if restante <= 0:
                 if not tarefa_concluida:
-                    timer_label.config(text="00:00", bg="white", fg="red")
-                    status.config(text="Tempo esgotado", bg="white", fg="red")
-                    play_time_expired_sound()
+                    if widget.winfo_exists():
+                        try:
+                            timer_label.config(text="00:00", bg="white", fg="red")
+                            status.config(text="Tempo esgotado", bg="white", fg="red")
+                            play_time_expired_sound()
+                        except tk.TclError:
+                            break
                 break
+
             minutos = restante // 60
             segundos = restante % 60
-            timer_label.config(text=f"{minutos:02}:{segundos:02}")
+
+            try:
+                timer_label.config(text=f"{minutos:02}:{segundos:02}")
+            except tk.TclError:
+                break
 
             percentual = restante / duracao
             if percentual <= 0.3 and not alerta_30:
-                widget.configure(bg="red")
-                titulo.config(bg="red", fg="white")
-                status.config(bg="red", fg="white")
-                botao_ok.config(bg="white", fg="black")
-                timer_label.config(bg="white", fg="black")
-                play_time_warning_sound()
+                if widget.winfo_exists():
+                    try:
+                        widget.configure(bg="red")
+                        titulo.config(bg="red", fg="white")
+                        status.config(bg="red", fg="white")
+                        botao_ok.config(bg="white", fg="black")
+                        timer_label.config(bg="white", fg="black")
+                        play_time_warning_sound()
+                    except tk.TclError:
+                        break
                 alerta_30 = True
 
             time.sleep(1)
 
+    def lembrete_sonoro_minimizado():
+        while not tarefa_concluida:
+            if widget.state() == 'iconic':  # Minimizado
+                winsound.PlaySound("audio/ping.wav", winsound.SND_FILENAME)
+                flash_janela(widget)
+            time.sleep(60)
+
+    # Intercepta o botão X do widget para apenas minimizar
+    def ao_fechar_widget():
+        widget.iconify()
+
+    widget.protocol("WM_DELETE_WINDOW", ao_fechar_widget)
+
     threading.Thread(target=atualizar_timer, daemon=True).start()
+    threading.Thread(target=lembrete_sonoro_minimizado, daemon=True).start()
 
 # ---------- Verificação e Disparo de Tarefas ----------
 def verificar_tarefas():
@@ -212,7 +296,8 @@ def editar_tarefa():
 
 # ---------- Iniciar Interface e Threads ----------
 janela = tk.Tk()
-janela.title("Gerenciador de Rotina")
+janela.title("TaskHud (By Talison Henke)")
+janela.iconbitmap("icon/taskhud.ico")
 
 tk.Label(janela, text="Título da tarefa").pack()
 entrada_titulo = tk.Entry(janela)
@@ -237,4 +322,5 @@ atualizar_lista()
 
 threading.Thread(target=verificar_tarefas, daemon=True).start()
 
+criar_icone_bandeja(janela)
 janela.mainloop()

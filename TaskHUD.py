@@ -296,7 +296,7 @@ def editar_tarefa():
 
 # ---------- Iniciar Interface e Threads ----------
 janela = tk.Tk()
-janela.title("TaskHud (By Talison Henke)")
+janela.title("TaskHUD (By Talison Henke)")
 janela.iconbitmap("icon/taskhud.ico")
 
 tk.Label(janela, text="Título da tarefa").pack()

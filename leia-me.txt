@@ -1,0 +1,11 @@
+IMPORTANTE - SOBRE PERMISSÕES DO SISTEMA
+
+Por padrão, o TaskHUD é instalado na pasta AppData\Local, que possui as permissões adequadas para que o sistema funcione corretamente.
+
+Se você escolher um diretório diferente na instalação (por exemplo, C:\Program Files ou outra pasta protegida do sistema), o programa poderá ter problemas para salvar suas tarefas, resultando em erros de permissão.
+
+⚠️ Caso isso ocorra, você deve executar o TaskHUD como ADMINISTRADOR. Para isso, clique com o botão direito no atalho do programa e escolha "Executar como administrador".
+
+Recomendação: mantenha a instalação no caminho padrão sugerido (AppData\Local).
+
+— Talison Henke

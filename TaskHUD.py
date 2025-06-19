@@ -3,15 +3,38 @@ import pystray
 import tkinter as tk
 from tkinter import messagebox
 import json
+import sys
 import os
 from datetime import datetime
 import threading
 import time
 import winsound
+import stat
 import ctypes
 import ctypes.wintypes
 
-TAREFAS_ARQUIVO = "tasks.json"
+
+# Garante que mesmo compilado, os caminhos relativos funcionem
+if getattr(sys, 'frozen', False):
+    os.chdir(os.path.dirname(sys.executable))
+
+DOCUMENTOS = os.path.join(os.path.expanduser("~"), "Documents", "TaskHUD")
+os.makedirs(DOCUMENTOS, exist_ok=True)
+TAREFAS_ARQUIVO = os.path.join(DOCUMENTOS, "tasks.json")
+
+# ---------- Proteção de Arquivo ----------
+def proteger_arquivo(caminho):
+    # Oculta e protege como leitura
+    os.chmod(caminho, stat.S_IREAD)
+    ctypes.windll.kernel32.SetFileAttributesW(caminho, 0x02)  # FILE_ATTRIBUTE_HIDDEN
+
+def desbloquear_arquivo(caminho):
+    # Remove somente leitura e oculto
+    try:
+        os.chmod(caminho, stat.S_IWRITE)
+        ctypes.windll.kernel32.SetFileAttributesW(caminho, 0x80)  # FILE_ATTRIBUTE_NORMAL
+    except Exception as e:
+        print("Erro ao desproteger:", e)
 
 # ---------- Ícone do sistema função bandeja ----------
 def criar_icone_bandeja(janela):
@@ -52,20 +75,27 @@ def carregar_tarefas():
     if not os.path.exists(TAREFAS_ARQUIVO):
         with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:
             json.dump([], f)
-        return []
+
+    desbloquear_arquivo(TAREFAS_ARQUIVO)
 
     try:
         with open(TAREFAS_ARQUIVO, "r", encoding="utf-8") as f:
-            return json.load(f)
+            tarefas = json.load(f)
     except json.JSONDecodeError:
-        # Arquivo corrompido → reescreve com lista vazia
+        tarefas = []
         with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:
-            json.dump([], f)
-        return []
+            json.dump(tarefas, f)
+
+    proteger_arquivo(TAREFAS_ARQUIVO)
+    return tarefas
 
 def salvar_tarefas(tarefas):
+    desbloquear_arquivo(TAREFAS_ARQUIVO)
+
     with open(TAREFAS_ARQUIVO, "w", encoding="utf-8") as f:
         json.dump(tarefas, f, indent=2, ensure_ascii=False)
+
+    proteger_arquivo(TAREFAS_ARQUIVO)
 
 # ---------- Sistema de Notificações ----------
 

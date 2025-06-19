@@ -1,0 +1,34 @@
+# Ignore pastas de build
+build/
+dist/
+__pycache__/
+
+# Ignore arquivos específicos do PyInstaller
+*.spec
+
+# Ignore arquivos de log ou temporários
+*.log
+*.tmp
+*.bak
+
+# Ignore pastas de configuração ou recursos temporários
+*.db
+*.sqlite3
+*.swp
+*.swo
+*.swn
+
+# Ignore o diretório de ícones e áudios, se forem recompilados ou regenerados
+icon/
+audio/
+
+# Ignore arquivos de cache de IDEs (VSCode, PyCharm etc.)
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignore pasta do Inno Setup output (se for diferente de dist/)
+Output/
+
+# Ignore arquivo tasks do sistema, se não quiser versionar dados pessoais
+tasks.json

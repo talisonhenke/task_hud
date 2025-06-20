@@ -13,10 +13,12 @@ import stat
 import ctypes
 import ctypes.wintypes
 
-
-# Garante que mesmo compilado, os caminhos relativos funcionem
 if getattr(sys, 'frozen', False):
-    os.chdir(os.path.dirname(sys.executable))
+    base_path = os.path.dirname(sys.executable)
+else:
+    base_path = os.path.dirname(__file__)
+
+icone_path = os.path.join(base_path, 'icon', 'taskhud.ico')
 
 DOCUMENTOS = os.path.join(os.path.expanduser("~"), "Documents", "TaskHUD")
 os.makedirs(DOCUMENTOS, exist_ok=True)
@@ -39,6 +41,9 @@ def desbloquear_arquivo(caminho):
 # ---------- Ícone do sistema função bandeja ----------
 def criar_icone_bandeja(janela):
     from pystray import Icon, MenuItem as item, Menu
+    from PIL import Image, ImageDraw
+    import threading
+    import os
 
     def mostrar():
         janela.after(0, janela.deiconify)
@@ -47,19 +52,18 @@ def criar_icone_bandeja(janela):
         icon.stop()
         janela.after(0, janela.destroy)
 
-    # Carrega o seu ícone personalizado .ico
     try:
-        image = Image.open("icon/taskhud.ico")
+        # Caminho fixo, pois os arquivos estão ao lado do executável, na pasta "icon"
+        image = Image.open(icone_path)
     except Exception as e:
         print("Erro ao carregar ícone personalizado:", e)
-        # Ícone fallback simples (quadrado preto)
         image = Image.new('RGB', (64, 64), "white")
         draw = ImageDraw.Draw(image)
         draw.rectangle((16, 16, 48, 48), fill="black")
 
     icon = Icon("TaskHUD", image, "Task HUD", menu=Menu(
-        item("Mostrar", lambda: mostrar()),
-        item("Sair", lambda: sair())
+        item("Mostrar", mostrar),
+        item("Sair", sair)
     ))
 
     def ao_fechar():
@@ -327,7 +331,7 @@ def editar_tarefa():
 # ---------- Iniciar Interface e Threads ----------
 janela = tk.Tk()
 janela.title("TaskHUD (By Talison Henke)")
-janela.iconbitmap("icon/taskhud.ico")
+janela.iconbitmap(icone_path)
 
 tk.Label(janela, text="Título da tarefa").pack()
 entrada_titulo = tk.Entry(janela)

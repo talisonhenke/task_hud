@@ -38,6 +38,7 @@ Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 Source: "dist\TaskHUD.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icon\*"; DestDir: "{app}\icon"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "dist\audio\*"; DestDir: "{app}\audio"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "leia-me.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
